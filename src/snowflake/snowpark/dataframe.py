@@ -285,7 +285,9 @@ def _get_aliased_column_names(
 ) -> List[str]:
     aliases = []
     for c in cs:
-        unquoted_col_name = c.strip('"')
+        # Drop only the enclosing quotes, so that an escaped quote ("") at the
+        # start or end of the name is kept.
+        unquoted_col_name = c[1:-1] if len(c) >= 2 and c[0] == c[-1] == '"' else c
         if c in common_col_names:
             if suffix:
                 column_case_insensitive = is_snowflake_quoted_id_case_insensitive(c)

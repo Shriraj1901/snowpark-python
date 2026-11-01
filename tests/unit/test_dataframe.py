@@ -24,7 +24,7 @@ from snowflake.snowpark._internal.analyzer.snowflake_plan_node import SnowflakeT
 from snowflake.snowpark._internal.ast.batch import AstBatch
 from snowflake.snowpark._internal.server_connection import ServerConnection
 from snowflake.snowpark._internal.utils import set_ast_state, AstFlagSource
-from snowflake.snowpark.dataframe import _get_unaliased
+from snowflake.snowpark.dataframe import _get_aliased_column_names, _get_unaliased
 from snowflake.snowpark.exceptions import SnowparkCreateDynamicTableException
 from snowflake.snowpark.session import Session
 from snowflake.snowpark.types import IntegerType, StringType
@@ -52,6 +52,22 @@ def test_get_unaliased():
     unaliased = "l_hfdjishafud_A"
     values = _get_unaliased(aliased)
     assert len(values) == 0
+
+
+@pytest.mark.parametrize(
+    "name",
+    ['"a"""', '"""a"""', '"Supplier.id ` ""quoted"""'],
+)
+def test_get_aliased_column_names_keeps_escaped_quotes(name):
+    # a column that is not shared by both sides keeps its exact name
+    assert _get_aliased_column_names(mock.Mock(), [name], None, None, []) == [name]
+    # a shared column only gets the prefix; its escaped quotes are kept
+    assert _get_aliased_column_names(mock.Mock(), [name], "l_", None, [name]) == [
+        f'"l_{name[1:-1]}"'
+    ]
+    assert _get_aliased_column_names(mock.Mock(), [name], None, "_r", [name]) == [
+        f'"{name[1:-1]}_r"'
+    ]
 
 
 def test_dataframe_method_alias():
